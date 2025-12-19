@@ -285,8 +285,8 @@
         현재 서브: <span id="serveWho">A</span> /
         목표 점수:
         <select id="target">
-          <option value="15">15</option>
-          <option value="21" selected>21</option>
+          <option value="15"selected>15</option>
+          <option value="21" >21</option>
           <option value="25">25</option>
         </select>
       </div>
@@ -315,7 +315,7 @@
       A: { score:0, set:0, name:"A팀", players:["A-1","A-2","A-3","A-4"], rot:0, servedOnce:false },
       B: { score:0, set:0, name:"B팀", players:["B-1","B-2","B-3","B-4"], rot:0, servedOnce:false },
       serve: "A",
-      target: 21,
+      target: 15,
       servePickLocked: true,
       history: []
     };
@@ -538,7 +538,7 @@
       state.history = [];
       state.A = { score:0, set:0, name:"A팀", players:["A-1","A-2","A-3","A-4"], rot:0, servedOnce:false };
       state.B = { score:0, set:0, name:"B팀", players:["B-1","B-2","B-3","B-4"], rot:0, servedOnce:false };
-      state.target = 21;
+      state.target = 15;
       state.servePickLocked = true;
 
       // 기본 시작은 A 서브(1번부터)
@@ -612,3 +612,4 @@
   </script>
 </body>
 </html>
+
