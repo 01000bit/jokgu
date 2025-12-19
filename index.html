@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>족구 점수판 (서브 유지 + 4인 로테이션 + 서브선택 잠금)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#121a33; --txt:#eaf0ff; --muted:#9fb0d0;
+      --a:#4aa3ff; --b:#ff5b7a; --good:#32d583;
+    }
+    *{box-sizing:border-box;font-family:system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif;}
+    body{margin:0;background:linear-gradient(180deg,#050814,var(--bg));color:var(--txt);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;}
+    .wrap{width:min(1100px,100%);display:grid;gap:14px;}
+    .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;}
+    .title{font-weight:900;letter-spacing:-0.6px}
+    .hint{color:var(--muted);font-size:13px;line-height:1.4}
+
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{
+      background:rgba(18,26,51,.92);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      padding:14px;
+      box-shadow:0 12px 40px rgba(0,0,0,.35);
+      position:relative;
+    }
+    .card.serving{
+      border-color: rgba(50,213,131,.55);
+      outline: 2px solid rgba(50,213,131,.22);
+      outline-offset: 0;
+    }
+
+    .teamHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .teamName{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+    input[type="text"]{
+      width:100%;max-width:260px;background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);color:var(--txt);
+      padding:10px 12px;border-radius:12px;font-size:16px;outline:none;
+    }
+
+    /* 서브 뱃지: 레이아웃 영향 0 */
+    .pill{
+      font-size:12px;
+      color:#081022;
+      background:var(--good);
+      padding:6px 12px;
+      border-radius:999px;
+      font-weight:900;
+
+      display:inline-flex;
+      opacity:0;
+      visibility:hidden;
+      pointer-events:none;
+      transition:opacity .12s ease;
+    }
+    .pill.on{ opacity:1; visibility:visible; }
+    .pillAbs{ position:absolute; top:12px; right:12px; }
+
+    .scoreBig{display:flex;align-items:baseline;justify-content:center;gap:16px;margin:10px 0 6px}
+    .num{
+      font-size:84px;
+      font-weight:950;
+      line-height:1;
+      min-width:3ch;
+      text-align:center;
+      font-variant-numeric: tabular-nums;
+    }
+    .meta{color:var(--muted);font-size:13px}
+    .setBox{display:flex;gap:12px;align-items:center;justify-content:flex-end;color:var(--muted);font-weight:800}
+
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    button{
+      border:none;border-radius:14px;padding:12px 12px;font-size:16px;font-weight:900;cursor:pointer;
+      background:rgba(255,255,255,.08);color:var(--txt);border:1px solid rgba(255,255,255,.10);
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:hover{filter:brightness(1.08)}
+    button,button:active,button:focus{ outline:none; box-shadow:none; transform:none; }
+    .btnA{background:rgba(74,163,255,.18);border-color:rgba(74,163,255,.35)}
+    .btnB{background:rgba(255,91,122,.18);border-color:rgba(255,91,122,.35)}
+    .danger{background:rgba(255,255,255,.06)}
+
+    .players{
+      margin-top:12px;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      display:grid;
+      gap:8px;
+    }
+    .players .titleRow{
+      display:flex;align-items:center;justify-content:space-between;
+      color:var(--muted);font-size:12px;font-weight:800;
+    }
+    .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .p{
+      display:flex;gap:8px;align-items:center;
+      padding:8px;border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.12);
+    }
+    .p .n{
+      width:26px;height:26px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;
+      border:1px solid rgba(255,255,255,.10);
+      color:rgba(234,240,255,.8);font-weight:900;font-size:12px;
+      background:rgba(255,255,255,.06);
+      flex:0 0 auto;
+    }
+    .p input{max-width:none;width:100%;padding:8px 10px;border-radius:12px;font-size:14px;}
+
+    /* 서버 태그도 레이아웃 고정 */
+    .serverTag{
+      margin-left:auto;font-size:11px;font-weight:950;padding:4px 8px;border-radius:999px;
+      background:rgba(50,213,131,.9);color:#081022;
+      display:inline-flex;
+      opacity:0; visibility:hidden;
+      pointer-events:none;
+      transition:opacity .12s ease;
+      flex:0 0 auto;
+    }
+    .p.server .serverTag{opacity:1; visibility:visible;}
+
+    .footer{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;background:rgba(255,255,255,.08);padding:2px 6px;border-radius:8px;border:1px solid rgba(255,255,255,.12)}
+
+    .servePick{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .servePick .lab{color:var(--muted);font-size:13px;font-weight:800}
+    #serveToA{background:rgba(74,163,255,.18);border-color:rgba(74,163,255,.35)}
+    #serveToB{background:rgba(255,91,122,.18);border-color:rgba(255,91,122,.35)}
+
+    /* 서브선택 잠금 버튼 + 길게누르기 진행 */
+    #serveLockBtn{
+      background:rgba(255,255,255,.10);
+      border-color:rgba(255,255,255,.18);
+      position:relative;
+      overflow:hidden;
+    }
+    #serveLockBtn::after{
+      content:"";
+      position:absolute; left:0; top:0; bottom:0;
+      width:0%;
+      background:rgba(50,213,131,.25);
+      transition:width 0s;
+    }
+    #serveLockBtn.holding::after{
+      width:100%;
+      transition:width 1s linear;
+    }
+    .servePick.locked #serveToA,
+    .servePick.locked #serveToB{
+      opacity:.35;
+      filter:grayscale(1);
+      cursor:not-allowed;
+    }
+
+    #fullscreenBtn{
+      background:linear-gradient(135deg,#4aa3ff,#32d583);
+      color:#081022;border:none;
+    }
+
+    #rotateOverlay{
+      position:fixed; inset:0; display:none;
+      align-items:center; justify-content:center;
+      background:rgba(5,8,20,.92);
+      z-index:9999;
+    }
+    #rotateOverlay .box{
+      width:min(520px, 92vw);
+      padding:18px 16px;border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(18,26,51,.92);
+      text-align:center;
+      box-shadow:0 12px 40px rgba(0,0,0,.35);
+    }
+    #rotateOverlay .icon{font-size:44px; margin-bottom:8px}
+    #rotateOverlay .t{font-size:20px; font-weight:950; margin-bottom:6px}
+    #rotateOverlay .s{font-size:14px; color:rgba(234,240,255,.75)}
+    #rotateOverlay .btnRow{margin-top:12px;display:flex;justify-content:center}
+    #rotateOverlay button{padding:12px 14px}
+
+    @media (max-width:760px){
+      .grid{grid-template-columns:1fr}
+      .num{font-size:72px}
+    }
+  </style>
+</head>
+<body>
+
+  <div id="rotateOverlay" aria-live="polite">
+    <div class="box">
+      <div class="icon">📱↩️</div>
+      <div class="t">가로모드로 돌려주세요</div>
+      <div class="s">더 크게 보려면 화면을 가로로 회전해 주세요.</div>
+      <div class="btnRow">
+        <button id="overlayFullscreenBtn">전체화면으로 보기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap" id="appRoot">
+    <div class="topbar">
+      <div>
+        <div class="title">족구 점수판 (서브 유지 + 4인 로테이션 + 서브선택 잠금)</div>
+        <div class="hint">
+          단축키: A팀 + <span class="kbd">Q</span>, A팀 - <span class="kbd">A</span> /
+          B팀 + <span class="kbd">P</span>, B팀 - <span class="kbd">L</span> /
+          되돌리기 <span class="kbd">Z</span>, 리셋 <span class="kbd">R</span>
+        </div>
+        <div class="hint">
+          규칙: 득점팀이 서브권 유지/획득. 서브권이 넘어올 때(사이드아웃) 로테이션.
+          <b>단, 각 팀이 "처음 서브권을 잡는 순간"은 1번부터 시작.</b><br/>
+          서브선택 잠금/해제는 <b>1초 이상 길게 누르기</b>.
+        </div>
+      </div>
+      <div class="meta" id="clock"></div>
+    </div>
+
+    <div class="grid">
+      <!-- A -->
+      <div class="card" data-team="A" id="cardA">
+        <span class="pill pillAbs" id="serveA">서브</span>
+
+        <div class="teamHead">
+          <div class="teamName">
+            <input id="nameA" type="text" value="A팀" />
+          </div>
+          <div class="setBox">세트 <span id="setA">0</span></div>
+        </div>
+
+        <div class="scoreBig"><div class="num" id="scoreA">0</div></div>
+
+        <div class="controls">
+          <button class="btnA" data-act="point+">점수 +1</button>
+          <button class="btnA" data-act="point-">점수 -1</button>
+          <button class="btnA" data-act="set+">세트 +1</button>
+          <button class="btnA" data-act="set-">세트 -1</button>
+        </div>
+
+        <div class="players">
+          <div class="titleRow">
+            <span>4인 로테이션</span>
+            <span class="meta">현재 서버 표시</span>
+          </div>
+          <div class="pgrid" id="playersA"></div>
+        </div>
+      </div>
+
+      <!-- B -->
+      <div class="card" data-team="B" id="cardB">
+        <span class="pill pillAbs" id="serveB">서브</span>
+
+        <div class="teamHead">
+          <div class="teamName">
+            <input id="nameB" type="text" value="B팀" />
+          </div>
+          <div class="setBox">세트 <span id="setB">0</span></div>
+        </div>
+
+        <div class="scoreBig"><div class="num" id="scoreB">0</div></div>
+
+        <div class="controls">
+          <button class="btnB" data-act="point+">점수 +1</button>
+          <button class="btnB" data-act="point-">점수 -1</button>
+          <button class="btnB" data-act="set+">세트 +1</button>
+          <button class="btnB" data-act="set-">세트 -1</button>
+        </div>
+
+        <div class="players">
+          <div class="titleRow">
+            <span>4인 로테이션</span>
+            <span class="meta">현재 서버 표시</span>
+          </div>
+          <div class="pgrid" id="playersB"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card footer">
+      <div class="meta">
+        현재 서브: <span id="serveWho">A</span> /
+        목표 점수:
+        <select id="target">
+          <option value="15">15</option>
+          <option value="21" selected>21</option>
+          <option value="25">25</option>
+        </select>
+      </div>
+
+      <div class="servePick locked">
+        <span class="lab">서브권 선택(경기 시작용):</span>
+        <button id="serveToA">A 서브로</button>
+        <button id="serveToB">B 서브로</button>
+        <button id="serveLockBtn" title="1초 이상 길게 누르면 잠금/해제">서브선택 잠금 🔒</button>
+      </div>
+
+      <div class="actions">
+        <button id="fullscreenBtn">전체화면으로 보기</button>
+        <button id="undo">되돌리기(Undo)</button>
+        <button id="reset" class="danger">전체 리셋</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    // servedOnce: 해당 팀이 "처음" 서브권 잡을 때 1번부터.
+    // 핵심: 서브 시작(A/B 선택)은 "새 경기 시작"으로 보고 servedOnce를 둘 다 초기화 후 선택팀만 true.
+    const state = {
+      A: { score:0, set:0, name:"A팀", players:["A-1","A-2","A-3","A-4"], rot:0, servedOnce:false },
+      B: { score:0, set:0, name:"B팀", players:["B-1","B-2","B-3","B-4"], rot:0, servedOnce:false },
+      serve: "A",
+      target: 21,
+      servePickLocked: true,
+      history: []
+    };
+
+    function snapshot() {
+      state.history.push(JSON.parse(JSON.stringify({
+        A: state.A, B: state.B, serve: state.serve, target: state.target, servePickLocked: state.servePickLocked
+      })));
+      if (state.history.length > 250) state.history.shift();
+    }
+
+    function clampNonNegative(n) { return Math.max(0, n); }
+
+    function buildPlayers(team){
+      const host = $(team === "A" ? "playersA" : "playersB");
+      host.innerHTML = "";
+      for(let i=0;i<4;i++){
+        const row = document.createElement("div");
+        row.className = "p";
+
+        const n = document.createElement("div");
+        n.className = "n";
+        n.textContent = String(i+1);
+
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.value = state[team].players[i];
+        inp.addEventListener("input", () => {
+          state[team].players[i] = inp.value;
+          render();
+        });
+
+        const tag = document.createElement("span");
+        tag.className = "serverTag";
+        tag.textContent = "서버";
+
+        row.appendChild(n);
+        row.appendChild(inp);
+        row.appendChild(tag);
+        host.appendChild(row);
+      }
+    }
+
+    function rotate(team){
+      state[team].rot = (state[team].rot + 1) % 4;
+    }
+
+    function checkTarget(team) {
+      const t = state.target;
+      if (state[team].score === t) alert(`${state[team].name} 목표 점수 ${t}점 도달!`);
+    }
+
+    // 서브권 전환: 득점팀이 서브권 유지/획득
+    // 사이드아웃이면 로테이션, 단 "그 팀이 처음 잡는 순간"은 1번부터
+    function switchServeTo(team){
+      if(state.serve !== team){
+        state.serve = team;
+
+        if (!state[team].servedOnce) {
+          state[team].rot = 0;          // 처음은 1번부터
+          state[team].servedOnce = true;
+        } else {
+          rotate(team);                 // 이후부터는 로테이션
+        }
+      }
+    }
+
+    // ✅ 서브 시작(경기 시작용): 항상 1번부터 + 두 팀 servedOnce 초기화
+    // => B로 시작했다가 A로 넘어가도 A는 "처음 잡는 순간"으로 처리되어 1번부터 시작!
+    function setServeManually(team){
+      ["A","B"].forEach(t => {
+        state[t].servedOnce = false;
+        state[t].rot = 0; // 표시도 1번 기준
+      });
+
+      state.serve = team;
+      state[team].rot = 0;
+      state[team].servedOnce = true;
+    }
+
+    function pointPlus(team){
+      state[team].score += 1;
+      checkTarget(team);
+      switchServeTo(team);
+    }
+
+    function act(team, type) {
+      snapshot();
+      if (type === "point+") pointPlus(team);
+      else if (type === "point-") state[team].score = clampNonNegative(state[team].score - 1);
+      else if (type === "set+") { state[team].set += 1; state.A.score=0; state.B.score=0; }
+      else if (type === "set-") state[team].set = clampNonNegative(state[team].set - 1);
+      render();
+    }
+
+    function render() {
+      $("scoreA").textContent = state.A.score;
+      $("scoreB").textContent = state.B.score;
+      $("setA").textContent = state.A.set;
+      $("setB").textContent = state.B.set;
+
+      state.A.name = $("nameA").value || "A팀";
+      state.B.name = $("nameB").value || "B팀";
+
+      $("serveA").classList.toggle("on", state.serve === "A");
+      $("serveB").classList.toggle("on", state.serve === "B");
+      $("serveWho").textContent = state.serve;
+
+      $("cardA").classList.toggle("serving", state.serve === "A");
+      $("cardB").classList.toggle("serving", state.serve === "B");
+
+      $("target").value = String(state.target);
+
+      // 서버 태그 표시
+      ["A","B"].forEach(team => {
+        const host = $(team === "A" ? "playersA" : "playersB");
+        host.querySelectorAll(".p").forEach((r, idx) => {
+          const isServer = (team === state.serve) && (idx === state[team].rot);
+          r.classList.toggle("server", isServer);
+        });
+      });
+
+      // 서브선택 잠금 반영
+      const servePick = document.querySelector(".servePick");
+      servePick.classList.toggle("locked", state.servePickLocked);
+
+      $("serveToA").disabled = state.servePickLocked;
+      $("serveToB").disabled = state.servePickLocked;
+
+      $("serveLockBtn").textContent = state.servePickLocked
+        ? "서브선택 잠금 🔒 (길게 눌러 해제)"
+        : "서브선택 해제 🔓 (길게 눌러 잠금)";
+    }
+
+    // 점수/세트 버튼
+    document.querySelectorAll(".card[data-team] button[data-act]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const team = btn.closest(".card").dataset.team;
+        act(team, btn.dataset.act);
+      });
+    });
+
+    // 서브 시작(잠금 체크)
+    $("serveToA").addEventListener("click", () => {
+      if (state.servePickLocked) return;
+      snapshot();
+      setServeManually("A");
+      render();
+    });
+    $("serveToB").addEventListener("click", () => {
+      if (state.servePickLocked) return;
+      snapshot();
+      setServeManually("B");
+      render();
+    });
+
+    // 서브선택 잠금/해제: 1초 롱프레스
+    (function setupServeLockLongPress(){
+      const btn = $("serveLockBtn");
+      const HOLD_MS = 1000;
+      let t = null;
+
+      const start = (e) => {
+        e.preventDefault();
+        if (t) return;
+        btn.classList.add("holding");
+
+        t = setTimeout(() => {
+          t = null;
+          btn.classList.remove("holding");
+
+          snapshot();
+          state.servePickLocked = !state.servePickLocked;
+          render();
+
+          if (navigator.vibrate) navigator.vibrate(40);
+        }, HOLD_MS);
+      };
+
+      const cancel = () => {
+        if (!t) return;
+        clearTimeout(t);
+        t = null;
+        btn.classList.remove("holding");
+      };
+
+      btn.addEventListener("mousedown", start);
+      btn.addEventListener("touchstart", start, { passive:false });
+
+      btn.addEventListener("mouseup", cancel);
+      btn.addEventListener("mouseleave", cancel);
+      btn.addEventListener("touchend", cancel);
+      btn.addEventListener("touchcancel", cancel);
+    })();
+
+    // Undo
+    $("undo").addEventListener("click", () => {
+      const prev = state.history.pop();
+      if (!prev) return;
+      state.A = prev.A; state.B = prev.B;
+      state.serve = prev.serve;
+      state.target = prev.target;
+      state.servePickLocked = prev.servePickLocked;
+
+      $("nameA").value = state.A.name;
+      $("nameB").value = state.B.name;
+
+      ["A","B"].forEach(team=>{
+        const host = $(team === "A" ? "playersA" : "playersB");
+        host.querySelectorAll("input").forEach((inp, i) => inp.value = state[team].players[i] ?? "");
+      });
+
+      render();
+    });
+
+    // Reset
+    $("reset").addEventListener("click", () => {
+      if (!confirm("정말 초기화할까요?")) return;
+
+      state.history = [];
+      state.A = { score:0, set:0, name:"A팀", players:["A-1","A-2","A-3","A-4"], rot:0, servedOnce:false };
+      state.B = { score:0, set:0, name:"B팀", players:["B-1","B-2","B-3","B-4"], rot:0, servedOnce:false };
+      state.target = 21;
+      state.servePickLocked = true;
+
+      // 기본 시작은 A 서브(1번부터)
+      setServeManually("A");
+
+      $("nameA").value = state.A.name;
+      $("nameB").value = state.B.name;
+
+      buildPlayers("A"); buildPlayers("B");
+      render();
+    });
+
+    $("target").addEventListener("change", (e) => { snapshot(); state.target = Number(e.target.value); render(); });
+
+    // 단축키
+    window.addEventListener("keydown", (e) => {
+      const k = e.key.toLowerCase();
+      if (k === "q") act("A", "point+");
+      if (k === "a") act("A", "point-");
+      if (k === "p") act("B", "point+");
+      if (k === "l") act("B", "point-");
+      if (k === "z") $("undo").click();
+      if (k === "r") $("reset").click();
+    });
+
+    // 시계
+    setInterval(() => {
+      $("clock").textContent = new Date().toLocaleString("ko-KR", { hour12:false });
+    }, 1000);
+
+    // Fullscreen
+    const fsBtn = $("fullscreenBtn");
+    const overlayFsBtn = $("overlayFullscreenBtn");
+    function isFullscreen(){ return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement; }
+    function requestFS(){
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+    }
+    function exitFS(){
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      else if (document.msExitFullscreen) document.msFullscreenElement && document.msExitFullscreen();
+    }
+    function toggleFS(){ isFullscreen() ? exitFS() : requestFS(); }
+    fsBtn.addEventListener("click", toggleFS);
+    overlayFsBtn.addEventListener("click", toggleFS);
+    function updateFSLabel(){
+      const txt = isFullscreen() ? "전체화면 해제" : "전체화면으로 보기";
+      fsBtn.textContent = txt; overlayFsBtn.textContent = txt;
+    }
+    ["fullscreenchange","webkitfullscreenchange","msfullscreenchange"].forEach(ev => document.addEventListener(ev, updateFSLabel));
+    updateFSLabel();
+
+    // Rotate 안내
+    function updateRotateOverlay(){
+      const isMobile = matchMedia("(pointer: coarse)").matches;
+      const isPortrait = matchMedia("(orientation: portrait)").matches;
+      $("rotateOverlay").style.display = (isMobile && isPortrait) ? "flex" : "none";
+    }
+    window.addEventListener("resize", updateRotateOverlay);
+    window.addEventListener("orientationchange", updateRotateOverlay);
+    document.addEventListener("visibilitychange", updateRotateOverlay);
+
+    // init
+    buildPlayers("A"); buildPlayers("B");
+    setServeManually("A"); // 기본 시작 A(1번)
+    render();
+    updateRotateOverlay();
+  </script>
+</body>
+</html>
