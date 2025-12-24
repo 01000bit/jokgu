@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>족구 클럽 점수판</title>
+  <style>
+    :root{
+      --bg:#0b0f18;
+      --text:#e9eefc;
+      --muted:#a7b3cf;
+      --line:rgba(255,255,255,.08);
+      --good:#32d583;
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Noto Sans KR,sans-serif;}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      background:radial-gradient(900px 500px at 50% 0%, rgba(70,120,255,.18), transparent 60%),
+                 linear-gradient(180deg, #060912, var(--bg));
+      color:var(--text);
+    }
+
+    .app{
+      width:min(760px, 100%);
+      background:rgba(20,26,36,.92);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:0 18px 60px rgba(0,0,0,.55);
+      padding:18px 18px 14px;
+    }
+
+    /* ✅ 클럽명 고정 */
+    .title{
+      text-align:center;
+      font-weight:950;
+      letter-spacing:-1px;
+      font-size:48px;
+      line-height:1.05;
+      margin:6px 0 14px;
+      background:linear-gradient(90deg,#1ec5ff,#7a5cff);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      text-shadow:0 0 22px rgba(77,170,255,.22);
+      user-select:none;
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+      align-items:stretch;
+    }
+
+    .team{
+      background:rgba(0,0,0,.14);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .teamHead{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .serveDot{
+      width:18px;height:18px;border-radius:50%;
+      border:2px solid rgba(255,255,255,.18);
+      background:transparent;
+      opacity:.2;
+      transition:all .15s ease;
+      flex:0 0 auto;
+    }
+    .serveDot.on{
+      opacity:1;
+      background:radial-gradient(circle at 30% 30%, #8de1ff, #1b8dff);
+      border-color:rgba(120,200,255,.65);
+      box-shadow:0 0 18px rgba(42,168,255,.45);
+    }
+
+    .teamName{
+      width:100%;
+      max-width:210px;
+      text-align:center;
+      font-size:20px;
+      font-weight:900;
+      color:var(--text);
+      background:transparent;
+      border:none;
+      outline:none;
+    }
+
+    .scoreBox{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:10px;
+      padding:18px 14px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      box-shadow:inset 0 -2px 0 rgba(42,168,255,.35);
+      margin-bottom:12px;
+    }
+    .score{
+      font-variant-numeric: tabular-nums;
+      font-size:72px;
+      font-weight:950;
+      min-width:2ch;
+      text-align:center;
+      line-height:1;
+    }
+
+    .btnRow{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      margin-bottom:12px;
+    }
+
+    button{
+      -webkit-tap-highlight-color:transparent;
+      border:none;
+      cursor:pointer;
+      user-select:none;
+      color:var(--text);
+      font-weight:950;
+      border-radius:10px;
+      padding:12px 18px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    button:focus{outline:none;}
+    button:active{transform:none;}
+
+    .btnPlus{min-width:70px}
+    .btnMinus{min-width:70px}
+
+    .rotWrap{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+      margin-top:2px;
+    }
+    .rotDots{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      align-items:center;
+    }
+    .dot{
+      width:22px;height:22px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      color:rgba(233,238,252,.75);
+      font-size:12px;
+      font-weight:900;
+      transition:all .12s ease;
+    }
+    .dot.active{
+      background:linear-gradient(180deg, rgba(90,169,255,.9), rgba(90,169,255,.45));
+      border-color:rgba(130,200,255,.75);
+      color:#081022;
+      box-shadow:0 0 14px rgba(42,168,255,.35);
+    }
+    .rotBtns{
+      display:flex;gap:10px;
+      justify-content:center;
+      align-items:center;
+    }
+    .rotBtns button{
+      width:42px;height:34px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:18px;
+      padding:0;
+    }
+
+    hr{
+      border:none;
+      border-top:1px solid rgba(255,255,255,.08);
+      margin:14px 0 12px;
+    }
+
+    .startRow{
+      margin-top:10px;
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .chip{
+      padding:10px 12px;
+      border-radius:10px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color:rgba(233,238,252,.9);
+      font-weight:900;
+      font-size:13px;
+    }
+
+    /* 서브 시작 선택 잠금 */
+    .startRow.locked #startA,
+    .startRow.locked #startB{
+      opacity:.35;
+      filter:grayscale(1);
+      cursor:not-allowed;
+      pointer-events:none;
+    }
+
+    /* 잠금 버튼 롱프레스 진행바 */
+    #lockBtn{
+      position:relative;
+      overflow:hidden;
+      min-width:170px;
+    }
+    #lockBtn::after{
+      content:"";
+      position:absolute;left:0;top:0;bottom:0;
+      width:0%;
+      background:rgba(50,213,131,.25);
+      transition:width 0s;
+    }
+    #lockBtn.holding::after{
+      width:100%;
+      transition:width 1s linear; /* 1초 */
+    }
+
+    .bottom{
+      display:flex;
+      justify-content:center;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .primary{
+      background:linear-gradient(180deg, rgba(42,168,255,.95), rgba(42,168,255,.65));
+      color:#081022;
+      border:none;
+      box-shadow:0 10px 24px rgba(42,168,255,.20);
+      padding:12px 18px;
+      min-width:150px;
+    }
+    .danger{
+      background:linear-gradient(180deg, rgba(255,75,75,.95), rgba(255,75,75,.65));
+      color:#140203;
+      border:none;
+      box-shadow:0 10px 24px rgba(255,75,75,.16);
+      padding:12px 18px;
+      min-width:150px;
+    }
+
+    .tinyHint{
+      text-align:center;
+      margin-top:10px;
+      color:rgba(167,179,207,.8);
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    @media (max-width:520px){
+      .title{font-size:42px;}
+      .score{font-size:64px;}
+      .teamName{max-width:160px;}
+      .primary,.danger{min-width:140px;}
+      #lockBtn{min-width:160px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="title" id="clubTitle">족구 클럽</div>
+
+    <div class="row">
+      <!-- A -->
+      <section class="team">
+        <div class="teamHead">
+          <div class="serveDot" id="serveDotA"></div>
+          <input class="teamName" id="nameA" value="영일만A" />
+        </div>
+
+        <div class="scoreBox"><div class="score" id="scoreA">0</div></div>
+
+        <div class="btnRow">
+          <button class="btnPlus" id="plusA">+1</button>
+          <button class="btnMinus" id="minusA">-1</button>
+        </div>
+
+        <div class="rotWrap">
+          <div class="rotDots" id="dotsA"></div>
+          <div class="rotBtns">
+            <button id="rotPrevA">-</button>
+            <button id="rotNextA">+</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- B -->
+      <section class="team">
+        <div class="teamHead">
+          <input class="teamName" id="nameB" value="영일만B" />
+          <div class="serveDot" id="serveDotB"></div>
+        </div>
+
+        <div class="scoreBox"><div class="score" id="scoreB">0</div></div>
+
+        <div class="btnRow">
+          <button class="btnPlus" id="plusB">+1</button>
+          <button class="btnMinus" id="minusB">-1</button>
+        </div>
+
+        <div class="rotWrap">
+          <div class="rotDots" id="dotsB"></div>
+          <div class="rotBtns">
+            <button id="rotPrevB">-</button>
+            <button id="rotNextB">+</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <hr />
+
+    <div class="startRow locked" id="startRow">
+      <span class="chip">서브 시작 선택</span>
+      <button id="startA">A로 시작</button>
+      <button id="startB">B로 시작</button>
+      <button id="lockBtn" title="1초 이상 길게 누르면 잠금/해제">잠금 🔒 (길게)</button>
+    </div>
+
+    <div class="bottom">
+      <button class="primary" id="switchServe">서브권 전환</button>
+      <button class="danger" id="resetAll">전체 초기화</button>
+    </div>
+
+    <div class="tinyHint">
+      규칙: 득점팀이 서브권 획득/유지, 서브권이 넘어오면 로테이션.<br/>
+      각 팀이 <b>처음</b> 서브권 잡는 순간은 1번부터. (점수/팀명 저장됨: 새로고침/재접속 유지)
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const STORAGE_KEY = "jokgu_scoreboard_yeongilman_fixedtitle_v1";
+
+  const state = {
+    A: { score: 0, rot: 0, servedOnce: false, name: "영일만A" },
+    B: { score: 0, rot: 0, servedOnce: false, name: "영일만B" },
+    serve: "A",
+    startLocked: true
+  };
+
+  function save(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return false;
+      const obj = JSON.parse(raw);
+      if(!obj || !obj.A || !obj.B) return false;
+      Object.assign(state, obj);
+      return true;
+    }catch(e){ return false; }
+  }
+
+  function makeDots(team){
+    const host = team === "A" ? $("dotsA") : $("dotsB");
+    host.innerHTML = "";
+    for(let i=0;i<4;i++){
+      const d = document.createElement("div");
+      d.className = "dot";
+      d.textContent = String(i+1);
+      d.addEventListener("click", () => {
+        state[team].rot = i;
+        save(); render();
+      });
+      host.appendChild(d);
+    }
+  }
+
+  function rotate(team, dir){
+    state[team].rot = (state[team].rot + dir + 4) % 4;
+  }
+
+  // 서브권을 team으로 바꾸는 로직:
+  // - 그 팀이 처음 서브권 잡는 순간: 1번(0)부터
+  // - 이미 서브해봤으면: 로테이션 +1
+  function switchServeTo(team){
+    if (state.serve === team) return;
+    state.serve = team;
+
+    if (!state[team].servedOnce) {
+      state[team].rot = 0;
+      state[team].servedOnce = true;
+    } else {
+      rotate(team, +1);
+    }
+  }
+
+  function addPoint(team, delta){
+    state[team].score = Math.max(0, state[team].score + delta);
+    if (delta > 0) switchServeTo(team);
+    save(); render();
+  }
+
+  // "시작 서브 선택"은 새 경기 시작처럼 처리:
+  // servedOnce 둘 다 초기화 후 선택팀만 true
+  function startServe(team){
+    ["A","B"].forEach(t=>{
+      state[t].servedOnce = false;
+      state[t].rot = 0;
+    });
+    state.serve = team;
+    state[team].servedOnce = true;
+    state[team].rot = 0;
+    save(); render();
+  }
+
+  function resetAll(){
+    state.A.score = 0; state.B.score = 0;
+    state.A.rot = 0; state.B.rot = 0;
+    state.A.servedOnce = false; state.B.servedOnce = false;
+    state.startLocked = true;
+    startServe("A"); // 내부에서 save/render
+  }
+
+  function render(){
+    $("nameA").value = state.A.name ?? "영일만A";
+    $("nameB").value = state.B.name ?? "영일만B";
+
+    $("scoreA").textContent = state.A.score;
+    $("scoreB").textContent = state.B.score;
+
+    $("serveDotA").classList.toggle("on", state.serve === "A");
+    $("serveDotB").classList.toggle("on", state.serve === "B");
+
+    const dotsA = $("dotsA").querySelectorAll(".dot");
+    const dotsB = $("dotsB").querySelectorAll(".dot");
+    dotsA.forEach((d,i)=> d.classList.toggle("active", i === state.A.rot));
+    dotsB.forEach((d,i)=> d.classList.toggle("active", i === state.B.rot));
+
+    const startRow = $("startRow");
+    startRow.classList.toggle("locked", state.startLocked);
+    $("lockBtn").textContent = state.startLocked ? "잠금 🔒 (길게)" : "해제 🔓 (길게)";
+  }
+
+  // 팀명 저장
+  $("nameA").addEventListener("input", (e)=>{ state.A.name = e.target.value; save(); });
+  $("nameB").addEventListener("input", (e)=>{ state.B.name = e.target.value; save(); });
+
+  // 점수 버튼
+  $("plusA").addEventListener("click", ()=> addPoint("A", +1));
+  $("minusA").addEventListener("click", ()=> addPoint("A", -1));
+  $("plusB").addEventListener("click", ()=> addPoint("B", +1));
+  $("minusB").addEventListener("click", ()=> addPoint("B", -1));
+
+  // 로테이션 버튼
+  $("rotPrevA").addEventListener("click", ()=>{ rotate("A",-1); save(); render(); });
+  $("rotNextA").addEventListener("click", ()=>{ rotate("A",+1); save(); render(); });
+  $("rotPrevB").addEventListener("click", ()=>{ rotate("B",-1); save(); render(); });
+  $("rotNextB").addEventListener("click", ()=>{ rotate("B",+1); save(); render(); });
+
+  // 서브 전환
+  $("switchServe").addEventListener("click", ()=>{
+    const next = state.serve === "A" ? "B" : "A";
+    switchServeTo(next);
+    save(); render();
+  });
+
+  // 전체 초기화
+  $("resetAll").addEventListener("click", ()=>{
+    if(!confirm("전체 초기화할까요?")) return;
+    resetAll();
+  });
+
+  // 시작 서브 선택(잠금 풀려있을 때만)
+  $("startA").addEventListener("click", ()=>{ if(!state.startLocked) startServe("A"); });
+  $("startB").addEventListener("click", ()=>{ if(!state.startLocked) startServe("B"); });
+
+  // 잠금 버튼: 1초 롱프레스
+  (function setupLockLongPress(){
+    const btn = $("lockBtn");
+    const HOLD_MS = 1000;
+    let timer = null;
+
+    const start = (e) => {
+      e.preventDefault();
+      if (timer) return;
+      btn.classList.add("holding");
+      timer = setTimeout(() => {
+        timer = null;
+        btn.classList.remove("holding");
+        state.startLocked = !state.startLocked;
+        save(); render();
+        if (navigator.vibrate) navigator.vibrate(40);
+      }, HOLD_MS);
+    };
+    const cancel = () => {
+      if (!timer) return;
+      clearTimeout(timer);
+      timer = null;
+      btn.classList.remove("holding");
+    };
+
+    btn.addEventListener("mousedown", start);
+    btn.addEventListener("touchstart", start, { passive:false });
+    btn.addEventListener("mouseup", cancel);
+    btn.addEventListener("mouseleave", cancel);
+    btn.addEventListener("touchend", cancel);
+    btn.addEventListener("touchcancel", cancel);
+  })();
+
+  // init
+  makeDots("A");
+  makeDots("B");
+
+  const loaded = load();
+  if(!loaded){
+    // 첫 실행 기본값: A가 첫 서브(1번)
+    state.A.servedOnce = true;
+    state.serve = "A";
+    save();
+  }
+  render();
+</script>
+</body>
+</html>
